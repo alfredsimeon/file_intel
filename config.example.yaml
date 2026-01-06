@@ -1,0 +1,46 @@
+# FILE-INTEL Configuration
+# Rename to config.yaml and add your keys
+
+# API Keys (Get these from the respective providers)
+api_keys:
+  virustotal: ""      # https://www.virustotal.com/gui/join-us
+  malwarebazaar: ""   # https://bazaar.abuse.ch/
+
+# Scanning Preferences
+scanning:
+  default_deep_scan: true
+  max_file_size_mb: 100
+  chunk_size_kb: 64
+  timeout_seconds: 30
+
+# Threat Intelligence
+threat_intel:
+  enable_online_lookup: false
+  cache_enabled: true
+  cache_dir: ".cache"
+  urlhaus_list_path: "plain-text-url-list.txt"
+
+# Detection Settings
+detection:
+  entropy_threshold: 7.2
+  enable_yara: true
+  yara_rules_dir: "rules"
+  enable_magic_check: true
+  enable_extension_check: true
+
+# GUI Preferences
+gui:
+  theme: "vintage"
+  window_size: [1200, 800]
+  recent_files_limit: 10
+
+# Reporting
+reporting:
+  auto_export: false
+  export_format: "json"  # json, html, csv
+  report_dir: "reports"
+
+# Logging
+logging:
+  level: "INFO"
+  file: "file_intel.log"

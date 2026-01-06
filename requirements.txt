@@ -1,0 +1,46 @@
+# FILE-INTEL Dependencies
+# Military-Grade File Type Identifier
+
+# Core Analysis
+python-magic-bin>=0.4.14    # libmagic bindings (Windows-compatible)
+yara-python>=4.3.0          # YARA rule engine
+pefile>=2023.2.7            # PE file analysis
+pyelftools>=0.29            # ELF file analysis
+lief>=0.14.0                # Advanced binary parsing (PE/ELF/Mach-O)
+
+# Hashing
+ssdeep>=3.4                 # Fuzzy hashing
+tlsh>=4.5.0                 # Trend Micro locality-sensitive hashing
+
+# Document Analysis
+oletools>=0.60.1            # Office document analysis
+olefile>=0.46               # OLE file parsing
+pypdf>=3.0.0                # PDF parsing
+pdfminer.six>=20221105      # Deep PDF text extraction
+
+# Archive Handling
+py7zr>=0.20.0               # 7z extraction
+rarfile>=4.1                # RAR extraction
+patool>=1.12                # Multi-format archive handler
+
+# GUI
+PyQt6>=6.5.0                # Desktop GUI framework
+PyQt6-Qt6>=6.5.0            # Qt6 binaries
+
+# Reports
+python-docx>=0.8.11         # DOCX generation
+reportlab>=4.0.0            # PDF generation
+Jinja2>=3.1.2               # HTML templating
+XlsxWriter>=3.1.0           # Excel export
+
+# Utilities
+requests>=2.31.0            # HTTP for APIs
+pyyaml>=6.0                 # Configuration
+colorama>=0.4.6             # Colored console output
+tqdm>=4.65.0                # Progress bars
+rich>=13.0.0                # Rich console output
+chardet>=5.2.0              # Character encoding detection
+filetype>=1.2.0             # Additional file type detection
+
+# Packaging (for building standalone)
+pyinstaller>=6.0.0          # Create standalone executable
