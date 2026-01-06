@@ -170,16 +170,22 @@ You can compile FILE-INTEL into a single `.exe` (Windows) or binary (Linux) that
 
 **Windows**:
 ```powershell
-# Run the build script
-build.bat
-# Output will be in dist\FILE-INTEL.exe
+.\build.bat
+# Output: dist\FILE-INTEL.exe
+```
+
+**macOS**:
+```bash
+chmod +x build_mac.sh
+./build_mac.sh
+# Output: dist/FILE-INTEL.app (drag to Applications)
 ```
 
 **Linux/Kali**:
 ```bash
 chmod +x build.sh
 ./build.sh
-# Output will be in dist/FILE-INTEL
+# Output: dist/FILE-INTEL
 ```
 
 ---

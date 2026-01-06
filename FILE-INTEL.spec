@@ -13,6 +13,13 @@ block_cipher = None
 # Get the project root
 PROJECT_ROOT = os.path.dirname(os.path.abspath(SPEC))
 
+# Determine Icon based on platform
+icon_file = None
+if sys.platform == 'darwin':
+    icon_file = 'assets/icon.icns'
+elif sys.platform == 'win32':
+    icon_file = 'assets/icon.ico'
+
 # Collect all data files
 datas = [
     # Configuration
@@ -118,5 +125,18 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='assets\\icon.ico',
+    entitlements_file=None,
+    icon=icon_file,
 )
+
+# Build .app bundle for macOS
+if sys.platform == 'darwin':
+    app = BUNDLE(
+        exe,
+        name='FILE-INTEL.app',
+        icon=icon_file,
+        bundle_identifier='com.fred.fileintel',
+        info_plist={
+            'NSHighResolutionCapable': 'True'
+        }
+    )
