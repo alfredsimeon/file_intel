@@ -30,7 +30,7 @@ if exist "dist" rmdir /s /q dist
 if exist "build" rmdir /s /q build
 
 REM Build using spec file
-pyinstaller FILE-INTEL.spec --clean
+python -m PyInstaller FILE-INTEL.spec --clean
 
 if errorlevel 1 (
     echo.

@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QSplitter,
     QFrame, QScrollArea, QGroupBox, QMessageBox, QTabWidget,
     QLineEdit, QCheckBox, QComboBox, QStatusBar, QMenuBar,
-    QMenu, QToolBar
+    QMenu, QToolBar, QAbstractItemView
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSize, QMimeData
 from PyQt6.QtGui import (
@@ -79,6 +79,16 @@ class DropZone(QFrame):
         super().__init__()
         self.setAcceptDrops(True)
         self.setMinimumHeight(200)
+        self.default_text = "Drop files or folders here"
+        self.sub_text = "or click Browse to select files"
+        self.icon_text = "📁"
+        self.setup_ui()
+    
+    def set_message(self, main_text, sub_text="", icon="📁"):
+        """Update drop zone text"""
+        self.default_text = main_text
+        self.sub_text = sub_text
+        self.icon_text = icon
         self.setup_ui()
     
     def setup_ui(self):
@@ -98,12 +108,13 @@ class DropZone(QFrame):
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # Icon
-        icon_label = QLabel("📁")
+        icon_label = QLabel(self.icon_text)
         icon_label.setStyleSheet("font-size: 48px; color: #8a7a6a;")
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # Text
-        text_label = QLabel("Drop files or folders here")
+        # Text
+        text_label = QLabel(self.default_text)
         text_label.setStyleSheet("""
             font-size: 18px;
             font-family: 'Courier New', monospace;
@@ -111,7 +122,7 @@ class DropZone(QFrame):
         """)
         text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        subtext = QLabel("or click Browse to select files")
+        subtext = QLabel(self.sub_text)
         subtext.setStyleSheet("""
             font-size: 12px;
             color: #706050;
@@ -241,6 +252,10 @@ class FileIntelApp(QMainWindow):
         
         # Apply vintage theme
         self.apply_vintage_theme()
+        
+        # Set app icon
+        if os.path.exists("assets/icon.ico"):
+            self.setWindowIcon(QIcon("assets/icon.ico"))
         
         # Central widget
         central = QWidget()
@@ -516,7 +531,28 @@ class FileIntelApp(QMainWindow):
         """)
         self.scan_btn.clicked.connect(self.start_scan)
         self.scan_btn.setEnabled(False)
+        self.scan_btn.setEnabled(False)
         layout.addWidget(self.scan_btn)
+        
+        # Stop button
+        self.stop_btn = QPushButton("STOP SCAN")
+        self.stop_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #8a3a3a;
+                font-size: 14px;
+                padding: 10px;
+            }
+            QPushButton:hover {
+                background-color: #9a4a4a;
+            }
+            QPushButton:disabled {
+                background-color: #3a2a2a;
+                color: #5a4a4a;
+            }
+        """)
+        self.stop_btn.clicked.connect(self.stop_scan)
+        self.stop_btn.setEnabled(False)
+        layout.addWidget(self.stop_btn)
         
         layout.addStretch()
         
@@ -546,6 +582,7 @@ class FileIntelApp(QMainWindow):
         self.results_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         self.results_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         self.results_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.results_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.results_table.itemSelectionChanged.connect(self.on_result_selected)
         
         results_layout.addWidget(self.results_table)
@@ -679,6 +716,18 @@ class FileIntelApp(QMainWindow):
         
         self.log(f"Queued {len(self.pending_files)} files for analysis")
         self.scan_btn.setEnabled(len(self.pending_files) > 0)
+        
+        # Update DropZone feedback
+        if self.pending_files:
+            first_file = os.path.basename(self.pending_files[0])
+            count = len(self.pending_files)
+            if count == 1:
+                msg = f"Ready: {first_file}"
+            else:
+                msg = f"Ready: {first_file} +{count-1} others"
+            
+            self.drop_zone.set_message(msg, "Click ANALYZE FILES to start", "✅")
+            
         self.status_bar.showMessage(f"{len(self.pending_files)} files ready to analyze")
     
     def browse_files(self):
@@ -710,7 +759,11 @@ class FileIntelApp(QMainWindow):
         # Setup progress
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setValue(0)
         self.scan_btn.setEnabled(False)
+        self.stop_btn.setEnabled(True)
+        self.drop_zone.setEnabled(False)
         self.results_table.setRowCount(0)
         self.results = []
         
@@ -729,6 +782,14 @@ class FileIntelApp(QMainWindow):
         self.worker.start()
         
         self.log(f"Started scanning {len(self.pending_files)} files...")
+        
+    def stop_scan(self):
+        """Stop the ongoing scan"""
+        if self.worker and self.worker.isRunning():
+            self.worker.cancel()
+            self.log("Stopping scan... please wait for current file.", "warning")
+            self.stop_btn.setEnabled(False)
+            self.status_bar.showMessage("Stopping scan...")
     
     def on_progress(self, message: str, percentage: float):
         """Handle progress update"""
@@ -776,7 +837,10 @@ class FileIntelApp(QMainWindow):
     def on_scan_complete(self, results: List):
         """Handle scan completion"""
         self.progress_bar.setVisible(False)
+        self.progress_bar.setVisible(False)
         self.scan_btn.setEnabled(True)
+        self.stop_btn.setEnabled(False)
+        self.drop_zone.setEnabled(True)
         
         high_threats = [r for r in results if r.threat_score >= 60]
         

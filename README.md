@@ -21,6 +21,7 @@
     *   **Entropy Analysis**: Detects packed, encrypted, or obfuscated malware.
     *   **Hash Fingerprinting**: MD5, SHA1, SHA256, Import Hash (imphash).
     *   **Polyglot Detection**: Identifies files valid as multiple formats (e.g., GIF+JS).
+*   **User Control**: Stop scan capability, read-only secure results, and visual drop feedback.
 *   **Threat Intelligence**:
     *   **YARA Scanning**: Integrates 1000+ community rules for malware signatures.
     *   **VirusTotal API**: Automated hash reputation lookups.
