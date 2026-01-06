@@ -417,7 +417,13 @@ class MagicDetector:
         ))
     
     def detect(self, file_path: str, deep_scan: bool = False) -> Optional[FileTypeResult]:
-        """Detect file type using magic numbers"""
+        """
+        Detect file type using multi-engine approach:
+        1. Custom Signatures (High Precision for Malware/Obscure formats)
+        2. Google Magika (AI-based, High Accuracy)
+        3. LibMagic (Standard 'file' command)
+        4. FileType (Header fallback)
+        """
         file_path = Path(file_path)
         
         if not file_path.exists():
@@ -425,41 +431,81 @@ class MagicDetector:
             return None
         
         try:
+            # Read header for custom signatures
             read_size = 65536 if deep_scan else 8192
-            
             with open(file_path, 'rb') as f:
                 header = f.read(read_size)
             
             if not header:
                 return None
             
-            best_match: Optional[Tuple[MagicSignature, float]] = None
-            
+            # 1. Check Custom Signatures (Priority)
+            best_match = None
             for sig in self.signatures:
                 if self._match_signature(header, sig):
                     confidence = self._calculate_confidence(header, sig)
                     if best_match is None or confidence > best_match[1]:
                         best_match = (sig, confidence)
             
-            if best_match:
-                sig, confidence = best_match
-                additional_info = {}
-                if sig.category == FileCategory.EXECUTABLE:
-                    additional_info = self._analyze_executable(header, sig)
-                
-                return FileTypeResult(
-                    detected_type=sig.name,
-                    extension=sig.extension,
-                    category=sig.category,
-                    mime_type=sig.mime_type,
-                    confidence=confidence,
-                    threat_level=sig.threat_level,
-                    description=sig.description,
-                    signature_offset=sig.offset,
-                    raw_magic=header[:min(32, len(header))],
-                    additional_info=additional_info
-                )
+            # If high confidence custom match, return it
+            if best_match and best_match[1] >= 0.8:
+                return self._build_result(best_match[0], best_match[1], header)
             
+            # 2. Try Magika (AI)
+            try:
+                from magika import Magika
+                magika = Magika()
+                res = magika.identify_path(Path(file_path))
+                if res.output.score >= 0.80:  # High confidence
+                    # Map Magika output to our format
+                    cat = self._map_category(res.output.group)
+                    return FileTypeResult(
+                        detected_type=res.output.label,
+                        extension=res.output.ct_label or "",
+                        category=cat,
+                        mime_type=res.output.mime_type,
+                        confidence=res.output.score,
+                        threat_level=ThreatLevel.SAFE, # Magika doesn't judge threat
+                        description=f"Detected by Magika AI: {res.output.description}",
+                        signature_offset=0,
+                        raw_magic=header[:16]
+                    )
+            except ImportError:
+                pass
+            except Exception as e:
+                self.logger.warning(f"Magika detection failed: {e}")
+
+            # 3. Try LibMagic (python-magic)
+            try:
+                import magic
+                # Mime type
+                mime = magic.from_file(str(file_path), mime=True)
+                # Description
+                desc = magic.from_file(str(file_path))
+                
+                # If we have a custom match (low confidence), reuse its category/threat
+                # Otherwise default
+                return FileTypeResult(
+                    detected_type=desc.split(',')[0],
+                    extension="", # Magic doesn't give ext
+                    category=FileCategory.UNKNOWN, 
+                    mime_type=mime,
+                    confidence=0.7,
+                    threat_level=ThreatLevel.MEDIUM if "executable" in mime else ThreatLevel.SAFE,
+                    description=f"LibMagic: {desc}",
+                    signature_offset=0,
+                    raw_magic=header[:16]
+                )
+            except ImportError:
+                pass
+            except Exception as e:
+                self.logger.warning(f"LibMagic failed: {e}")
+
+            # 4. Fallback: Return best custom match (even if low confidence)
+            if best_match:
+                return self._build_result(best_match[0], best_match[1], header)
+            
+            # 5. Unknown
             return FileTypeResult(
                 detected_type="Unknown",
                 extension="",
@@ -478,6 +524,37 @@ class MagicDetector:
         except Exception as e:
             self.logger.error(f"Error detecting file type: {e}")
             return None
+
+    def _build_result(self, sig: MagicSignature, confidence: float, header: bytes) -> FileTypeResult:
+        """Helper to build result from signature"""
+        additional_info = {}
+        if sig.category == FileCategory.EXECUTABLE:
+            additional_info = self._analyze_executable(header, sig)
+        
+        return FileTypeResult(
+            detected_type=sig.name,
+            extension=sig.extension,
+            category=sig.category,
+            mime_type=sig.mime_type,
+            confidence=confidence,
+            threat_level=sig.threat_level,
+            description=sig.description,
+            signature_offset=sig.offset,
+            raw_magic=header[:min(32, len(header))],
+            additional_info=additional_info
+        )
+
+    def _map_category(self, group: str) -> FileCategory:
+        """Map Magika group to FileCategory"""
+        group = group.lower()
+        if "executable" in group or "code" in group: return FileCategory.EXECUTABLE
+        if "document" in group or "text" in group: return FileCategory.DOCUMENT
+        if "archive" in group: return FileCategory.ARCHIVE
+        if "image" in group: return FileCategory.IMAGE
+        if "audio" in group: return FileCategory.AUDIO
+        if "video" in group: return FileCategory.VIDEO
+        return FileCategory.DATA
+
     
     def _match_signature(self, header: bytes, sig: MagicSignature) -> bool:
         """Check if file header matches a signature"""

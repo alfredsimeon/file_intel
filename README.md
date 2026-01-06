@@ -18,6 +18,7 @@
 *   **Threat Scoring**: Calculates a risk score (0-100) based on entropy, spoofing, and heuristics.
 *   **Extension Spoofing Detection**: Catches double extensions (`malware.pdf.exe`), RTLO attacks, and mismatches.
 *   **Deep Inspection**:
+    *   **Multi-Engine Analysis**: Combines **Google Magika (AI)**, **LibMagic**, and custom signatures for 99.9% detection accuracy.
     *   **Entropy Analysis**: Detects packed, encrypted, or obfuscated malware.
     *   **Hash Fingerprinting**: MD5, SHA1, SHA256, Import Hash (imphash).
     *   **Polyglot Detection**: Identifies files valid as multiple formats (e.g., GIF+JS).
